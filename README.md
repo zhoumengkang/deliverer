@@ -48,18 +48,18 @@ $ ./bin/deliverer -tAction::initUser -n3 -l5
 ```bash
 $ ./bin/deliverer -v7979-1624369150991941
 ```
+通过 `-v` `requestId` 来详细查看完整调用栈
 
 ![demo](doc/img/2.jpg)
-
-通过 `-v` `requestId` 来详细查看完整调用栈
 
 ```bash
 $ ./bin/deliverer -tSqlExecute::getAll -n1 -l3
 ```
 
+当要查询方法，函数调用栈过深，不在层级查询范围之内，则其外层调用显示红色
+
 ![demo](doc/img/3.jpg)
 
-当要查询的不在层级查询范围之内，则显示红色
 
 # todo
 

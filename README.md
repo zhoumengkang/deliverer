@@ -22,6 +22,7 @@ sudo service php-fpm restart
 ```bash
 $ chmod +x deliverer
 ```
+用一段我自己很久之前的祖传代码（我的博客）来跑下
 ```bash
 $ ./bin/deliverer -t
 ```

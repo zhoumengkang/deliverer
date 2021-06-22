@@ -1,0 +1,439 @@
+#!/usr/bin/env php
+<?php
+
+$deliverer = new Deliverer($argv);
+$deliverer->monitor();
+
+class Deliverer
+{
+    const WORK_SPACE = "/tmp/deliverer";
+
+    private $logDir          = self::WORK_SPACE . "/log/";
+    private $processedLogDir = self::WORK_SPACE . "/history/";
+    private $configDir       = self::WORK_SPACE . "/config/";
+
+    private $stat = "stat";
+
+    /**
+     * @var string
+     */
+    private $trace = null;
+
+    /**
+     * @var bool
+     */
+    private $traceRoute = false;
+
+    /**
+     * @var int
+     */
+    private $traceNum;
+
+    /**
+     * @var string
+     */
+    private $traceRequestId;
+
+    /**
+     * @var int
+     */
+    private $stackDepth = 5;
+
+    public function __construct($argv)
+    {
+        $shortOpts = "t::l:n:v:rh";
+        $longOpts  = ["trace::", "level:", "number:", "view:", "route", "help"];
+        $options   = getopt($shortOpts, $longOpts);
+
+        foreach ($options as $k => $v) {
+
+            if ($k == "h" || $k == "help") {
+                $this->help();
+            }
+
+            if ($k == "r" || $k == "route") {
+                $this->traceRoute = true;
+            }
+
+            if ($k == "t" || $k == "trace") {
+                $this->trace = $v;
+            }
+
+            if ($k == "n" || $k == "number") {
+                $this->traceNum = intval($v);
+            }
+
+            if ($k == "l" || $k == "level") {
+                $this->stackDepth = intval($v);
+            }
+
+            if ($k == "v" || $k == "view") {
+                $this->traceRequestId = $v;
+                $this->stackDepth     = $this->stackDepth > 50 ? $this->stackDepth : 50;
+            }
+        }
+
+        if ($this->trace === null && $this->traceRequestId == null) {
+            $this->help();
+        }
+
+        $this->start();
+    }
+
+    public function __destruct()
+    {
+        $this->stop();
+    }
+
+    private function start()
+    {
+        $this->initDir($this->configDir);
+        $this->initDir($this->logDir);
+        $this->initDir($this->processedLogDir);
+
+        $file = $this->configDir . $this->stat;
+
+        if (!file_exists($file)) {
+            touch($file);
+        }
+    }
+
+    private function initDir($dir)
+    {
+        if (!file_exists($dir)) {
+            mkdir($dir, 0777, true);
+        }
+    }
+
+    private function stop()
+    {
+        $stat = $this->configDir . $this->stat;
+
+        if (file_exists($stat)) {
+            unlink($stat);
+        }
+
+        foreach (new DirectoryIterator($this->logDir) as $fileInfo) {
+            if ($fileInfo->isDot()) continue;
+            $this->rmLog($fileInfo->getFilename());
+        }
+    }
+
+    private function help()
+    {
+        echo "Usage: deliverer [OPTION]...
+  -h,  --help                      print this help
+  -r,  --route                     trace filter by http url route
+  -t,  --trace                     trace function or method, default value is all user function
+  -l,  --level                     trace function stack depth, default value is 5    
+  -n,  --number                    execution times and exit
+  
+  more info : https://mengkang.net/1473.html
+";
+        exit;
+    }
+
+    public function monitor()
+    {
+        if ($this->traceRequestId) {
+            $file = new SplFileObject($this->processedLogDir . $this->traceRequestId . ".log");
+            $this->read($file);
+            return;
+        }
+
+        $traceNum = 0;
+
+        while (true) {
+            foreach (new DirectoryIterator($this->logDir) as $fileInfo) {
+
+                if ($fileInfo->isDot()) continue;
+                $file    = new SplFileObject($fileInfo->getPath() . "/" . $fileInfo->getFilename());
+                $matched = $this->read($file);
+                if ($matched) $traceNum++;
+
+                $this->rmLog($fileInfo->getFilename());
+
+                if ($traceNum >= $this->traceNum) {
+                    exit;
+                }
+            }
+
+            usleep(100);
+        }
+    }
+
+    private function read(SplFileObject $file)
+    {
+        $lineNo  = 0;
+        $matched = false;
+
+        $process = new TraceLogProcess($this->stackDepth);
+
+        while (!$file->eof()) {
+            if ($lineNo > 0) {
+                $lineNo++;
+            }
+
+            $line = trim($file->fgets());
+
+            if ($line == "---") {
+                $lineNo = 1;
+                continue;
+            }
+
+
+            if ($lineNo == 2) {
+                echo $line . "\n";
+
+                if ($this->traceRoute && !$matched && strpos($line, $this->trace)) {
+                    $matched = true;
+                }
+
+                continue;
+            }
+
+            $match = false;
+
+            if (!$this->traceRoute) {
+                $match = strpos($line, $this->trace);
+                if (!$matched && $match) {
+                    $matched = true;
+                }
+            }
+
+            $process->run($line, $match);
+        }
+
+        return $matched;
+    }
+
+    private function rmLog($filename)
+    {
+        copy($this->logDir . $filename, $this->processedLogDir . $filename);
+        unlink($this->logDir . $filename);
+    }
+}
+
+/**
+ * Class TraceHeader
+ *
+ * 11256 1624285659059411 PHP-FPM GET /index.php?m=Blog&a=show&id=1299
+ * 11256 1624285659059411 PHP-FPM POST /index.php?m=Blog&a=modify&id=1299  content=xxx
+ * 11256 1624285659059411 CLI php xxx.php -a b -b ddd
+ */
+class TraceHeader
+{
+    public $pid;
+    public $startTime;
+    public $sapi;
+    public $body;
+
+    public function __construct(string $header)
+    {
+        $tmp = explode(" ", $header);
+        if (count($tmp) < 4) {
+            throw new RuntimeException("error header:" . $header);
+        }
+
+        $this->pid       = $tmp[0];
+        $this->startTime = $tmp[1];
+        $this->sapi      = $tmp[2];
+        $this->body      = $tmp[3];
+    }
+}
+
+/**
+ * Class PhpFunction
+ *
+ * 1624285659059375|0x7fd8c5c1db30|0x7fd8c5c1da50|DbConnection::execute|/xxx/library/mysql/DbConnection.php|122
+ */
+class PhpFunction
+{
+    public $startTime;
+    public $point;
+    public $prevPoint;
+    public $method;
+    public $file;
+    public $line;
+    public $level;
+    public $useTime;
+    public $hiddenNum = 0;
+    /**
+     * @var int
+     *
+     * 1 真实命中
+     * 2 子调用命中（用于真实命中未能显示的情况）
+     */
+    public $status = 0;
+
+
+    public function __construct(string $line)
+    {
+        $data = explode("|", $line);
+
+        if (count($data) != 6) {
+            throw new RuntimeException("error data:" . $line);
+        }
+
+        $this->startTime = $data[0];
+        $this->point     = $data[1];
+        $this->prevPoint = $data[2];
+        $this->method    = $data[3];
+        $this->file      = $data[4];
+        $this->line      = $data[5];
+    }
+}
+
+class TraceLogProcess
+{
+    /**
+     * @var PhpFunction[]
+     */
+    private $stack = [];
+
+    private $stackMaxDepth;
+
+    private $stackCurrentDepth = 0;
+
+    private $stackRootPoint;
+
+    /**
+     * @var PhpFunction
+     */
+    private $currentFunction;
+
+    /**
+     * Process constructor.
+     *
+     * @param int    $stackMaxDepth
+     * @param string $stackRootPoint
+     */
+    public function __construct(int $stackMaxDepth = 5, string $stackRootPoint = "(nil)")
+    {
+        $this->stackMaxDepth  = $stackMaxDepth;
+        $this->stackRootPoint = $stackRootPoint;
+    }
+
+    /**
+     * @param $line
+     * @param $isHit bool 是否匹配命中
+     */
+    public function run($line, $isHit)
+    {
+        if (!$line) {
+            return;
+        }
+
+        if ($line == "---end---") {
+            $this->popStack();
+            return;
+        }
+
+        $phpFunction         = new PhpFunction($line);
+        $phpFunction->status = $isHit ? 1 : 0;
+
+        $this->pushStack($phpFunction);
+    }
+
+    private function pushStack(PhpFunction $function)
+    {
+        $this->currentFunction = $function;
+
+        if ($function->prevPoint == $this->stackRootPoint) {
+            $this->popStack();
+        }
+
+        if (empty($this->stack)) {
+            $function->level         = 1;
+            $this->stackCurrentDepth = $function->level;
+            $function->useTime       = 0;
+            $this->stack[]           = $function;
+
+            return true;
+        }
+
+        $updateLastSameLevelFunctionUseTime = false;
+
+        for ($i = count($this->stack); $i > 0; $i--) {
+            $item = $this->stack[$i - 1];
+
+            // 更新最后一个方法（函数）的耗时
+            if ($i == count($this->stack) && $function->prevPoint != $item->point) {
+                $item->useTime = $function->startTime - $item->startTime;
+            }
+
+            // 挂载到前置调用链
+            if ($function->prevPoint == $item->point) {
+                $function->level = $item->level + 1;
+
+                // 如果超出则忽略
+                if ($function->level > $this->stackMaxDepth) {
+                    $item->hiddenNum++;
+
+                    if ($function->status == 1) $item->status = 2;
+
+                    break;
+                }
+
+                $this->stack[] = $function;
+                break;
+            }
+
+            // 没有找到前置向前遍历
+            if (!$updateLastSameLevelFunctionUseTime && $function->point == $item->point) {
+                $item->useTime = $function->startTime - $item->startTime;
+            }
+        }
+
+
+        if ($function->level > $this->stackCurrentDepth) {
+            $this->stackCurrentDepth = $function->level;
+        }
+
+        return true;
+    }
+
+    public function popStack()
+    {
+        if (count($this->stack) < 1) {
+            return;
+        }
+
+        foreach ($this->stack as $function) {
+            $this->patchUseTime($function);
+
+            for ($i = $function->level; $i > 1; $i--) {
+                echo "│   ";
+            }
+
+            $format = "├── [%s ms] %s %s:%s\n";
+            if ($function->status == 1) {
+                $format = "├── [%s ms] \033[32m%s %s:%s\033[0m\n";
+            } elseif ($function->status == 2) {
+                $format = "├── [%s ms] \033[31m%s %s:%s\033[0m\n";
+            }
+
+            $lastData = $function->line;
+
+            if ($function->hiddenNum > 0) {
+                $lastData .= " \033[1;33m(+ " . $function->hiddenNum . ")\033[0m";
+            }
+
+            printf($format, intval($function->useTime) / 1000, $function->method, $function->file, $lastData);
+
+            unset($function);
+        }
+
+        $this->stack             = [];
+        $this->stackCurrentDepth = 0;
+    }
+
+    private function patchUseTime(PhpFunction $function)
+    {
+        if ($function->useTime > 0) {
+            return;
+        }
+
+        $function->useTime = $this->currentFunction->startTime - $function->startTime;
+    }
+}

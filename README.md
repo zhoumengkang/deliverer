@@ -23,10 +23,17 @@ sudo service php-fpm restart
 $ chmod +x deliverer
 ```
 ```bash
+$ ./bin/deliverer -t
+```
+![demo](doc/img/0.jpg)
+
+```bash
 $ ./bin/deliverer -tAction::initUser -n3 -l5
 ```
 
 ![demo](doc/img/1.jpg)
+![demo](doc/img/1.1.jpg)
+
 
 参数 | 值 | 解释
 -----|-----|-----

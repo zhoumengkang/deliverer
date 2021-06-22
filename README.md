@@ -25,6 +25,8 @@ $ chmod +x deliverer
 ```bash
 $ ./bin/deliverer -t
 ```
+这样会一直监控所有的 php 进程的执行
+
 ![demo](doc/img/0.jpg)
 
 ```bash

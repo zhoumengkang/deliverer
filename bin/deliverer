@@ -98,6 +98,8 @@ class Deliverer
         }
 
         file_put_contents($file, getmypid());
+
+        $this->setSignalHandler();
     }
 
     private function initDir($dir)
@@ -107,7 +109,15 @@ class Deliverer
         }
     }
 
-    private function stop()
+    private function setSignalHandler()
+    {
+        declare(ticks=1);
+        pcntl_signal(SIGINT, function(){
+            exit;
+        });
+    }
+
+    public function stop()
     {
         $stat = $this->configDir . $this->stat;
 

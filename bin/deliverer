@@ -105,7 +105,8 @@ class Deliverer
     private function initDir($dir)
     {
         if (!file_exists($dir)) {
-            mkdir($dir, 0777, true);
+            mkdir($dir, 0777, true); // 默认的umask为022，与 777 & 运算之后，就变成了 755
+            chmod($dir,0777);
         }
     }
 
@@ -165,7 +166,7 @@ class Deliverer
 
                 $this->rmLog($fileInfo->getFilename());
 
-                if ($traceNum >= $this->traceNum) {
+                if ($this->traceNum > 0 && $traceNum >= $this->traceNum) {
                     exit;
                 }
             }

@@ -1,5 +1,6 @@
-# deliverer
-祖传代码跑路拯救者，基于 7.2.5 开发，其他版本还未做兼容
+`deliverer` 祖传代码跑路拯救者
+> 基于 7.2.5 开发，其他版本还未做兼容，本周跟上
+
 # 安装
 ```bash
 $ phpize
@@ -28,14 +29,15 @@ $ ./bin/deliverer -t
 ```
 这样会一直监控所有的 php 进程的执行
 
-![demo](./doc/img/0.jpg)
+![0.jpg](https://static.mengkang.net/upload/image/2021/0623/1624420468155102.jpg)
+
 
 ```bash
 $ ./bin/deliverer -tAction::initUser -n3 -l5
 ```
 
-![demo](./doc/img/1.jpg)
-![demo](./doc/img/1.1.jpg)
+![1.jpg](https://static.mengkang.net/upload/image/2021/0623/1624420481407372.jpg)
+![1.1.jpg](https://static.mengkang.net/upload/image/2021/0623/1624420488305285.jpg)
 
 
 参数 | 值 | 解释
@@ -50,7 +52,8 @@ $ ./bin/deliverer -v7979-1624369150991941
 ```
 通过 `-v` `requestId` 来详细查看完整调用栈
 
-![demo](./doc/img/2.jpg)
+![2.jpg](https://static.mengkang.net/upload/image/2021/0623/1624420502378165.jpg)
+
 
 ```bash
 $ ./bin/deliverer -tSqlExecute::getAll -n1 -l3
@@ -58,11 +61,11 @@ $ ./bin/deliverer -tSqlExecute::getAll -n1 -l3
 
 当要查询方法，函数调用栈过深，不在层级查询范围之内，则其外层调用显示红色
 
-![demo](./doc/img/3.jpg)
+![3.jpg](https://static.mengkang.net/upload/image/2021/0623/1624420511944914.jpg)
 
 
 # todo
 
 1. 配置项优化
 2. 命令行和扩展联动配置
-2. 其他
+2. 其他版本还未做兼容，本周跟上

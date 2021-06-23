@@ -215,34 +215,6 @@ class Deliverer
 }
 
 /**
- * Class TraceHeader
- *
- * 11256 1624285659059411 PHP-FPM GET /index.php?m=Blog&a=show&id=1299
- * 11256 1624285659059411 PHP-FPM POST /index.php?m=Blog&a=modify&id=1299  content=xxx
- * 11256 1624285659059411 CLI php xxx.php -a b -b ddd
- */
-class TraceHeader
-{
-    public $pid;
-    public $startTime;
-    public $sapi;
-    public $body;
-
-    public function __construct(string $header)
-    {
-        $tmp = explode(" ", $header);
-        if (count($tmp) < 4) {
-            throw new RuntimeException("error header:" . $header);
-        }
-
-        $this->pid       = $tmp[0];
-        $this->startTime = $tmp[1];
-        $this->sapi      = $tmp[2];
-        $this->body      = $tmp[3];
-    }
-}
-
-/**
  * Class PhpFunction
  *
  * 1624285659059375|0x7fd8c5c1db30|0x7fd8c5c1da50|DbConnection::execute|/xxx/library/mysql/DbConnection.php|122
@@ -267,7 +239,7 @@ class PhpFunction
     public $status = 0;
 
 
-    public function __construct(string $line)
+    public function __construct($line)
     {
         $data = explode("|", $line);
 
@@ -289,7 +261,7 @@ class TraceLogProcess
     /**
      * @var PhpFunction[]
      */
-    private $stack = [];
+    private $stack = array();
 
     private $stackMaxDepth;
 
@@ -308,7 +280,7 @@ class TraceLogProcess
      * @param int    $stackMaxDepth
      * @param string $stackRootPoint
      */
-    public function __construct(int $stackMaxDepth = 5, string $stackRootPoint = "(nil)")
+    public function __construct($stackMaxDepth = 5, $stackRootPoint = "(nil)")
     {
         $this->stackMaxDepth  = $stackMaxDepth;
         $this->stackRootPoint = $stackRootPoint;
@@ -424,7 +396,7 @@ class TraceLogProcess
             unset($function);
         }
 
-        $this->stack             = [];
+        $this->stack             = array();
         $this->stackCurrentDepth = 0;
     }
 

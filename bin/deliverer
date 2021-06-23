@@ -96,6 +96,8 @@ class Deliverer
         if (!file_exists($file)) {
             touch($file);
         }
+
+        file_put_contents($file, getmypid());
     }
 
     private function initDir($dir)
@@ -109,7 +111,7 @@ class Deliverer
     {
         $stat = $this->configDir . $this->stat;
 
-        if (file_exists($stat)) {
+        if (file_exists($stat) && file_get_contents($stat) == getmypid()) {
             unlink($stat);
         }
 
@@ -261,7 +263,7 @@ class TraceLogProcess
     /**
      * @var PhpFunction[]
      */
-    private $stack = array();
+    private $stack = [];
 
     private $stackMaxDepth;
 
@@ -396,7 +398,7 @@ class TraceLogProcess
             unset($function);
         }
 
-        $this->stack             = array();
+        $this->stack             = [];
         $this->stackCurrentDepth = 0;
     }
 

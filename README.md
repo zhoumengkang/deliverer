@@ -28,14 +28,14 @@ $ ./bin/deliverer -t
 ```
 这样会一直监控所有的 php 进程的执行
 
-![demo](doc/img/0.jpg)
+![demo](./doc/img/0.jpg)
 
 ```bash
 $ ./bin/deliverer -tAction::initUser -n3 -l5
 ```
 
-![demo](doc/img/1.jpg)
-![demo](doc/img/1.1.jpg)
+![demo](./doc/img/1.jpg)
+![demo](./doc/img/1.1.jpg)
 
 
 参数 | 值 | 解释
@@ -50,7 +50,7 @@ $ ./bin/deliverer -v7979-1624369150991941
 ```
 通过 `-v` `requestId` 来详细查看完整调用栈
 
-![demo](doc/img/2.jpg)
+![demo](./doc/img/2.jpg)
 
 ```bash
 $ ./bin/deliverer -tSqlExecute::getAll -n1 -l3
@@ -58,7 +58,7 @@ $ ./bin/deliverer -tSqlExecute::getAll -n1 -l3
 
 当要查询方法，函数调用栈过深，不在层级查询范围之内，则其外层调用显示红色
 
-![demo](doc/img/3.jpg)
+![demo](./doc/img/3.jpg)
 
 
 # todo

@@ -107,14 +107,14 @@ class Deliverer
     {
         if (!file_exists($dir)) {
             mkdir($dir, 0777, true); // 默认的umask为022，与 777 & 运算之后，就变成了 755
-            chmod($dir,0777);
+            chmod($dir, 0777);
         }
     }
 
     private function setSignalHandler()
     {
         declare(ticks=1);
-        pcntl_signal(SIGINT, function(){
+        pcntl_signal(SIGINT, function () {
             exit;
         });
     }
@@ -214,7 +214,11 @@ class Deliverer
                 }
             }
 
-            $process->run($line, $match);
+            try {
+                $process->run($line, $match);
+            } catch (Exception $e) {
+                echo $e->getMessage();
+            }
         }
 
         return $matched;
@@ -257,7 +261,7 @@ class PhpFunction
         $data = explode("|", $line);
 
         if (count($data) != 6) {
-            throw new RuntimeException("error data:" . $line);
+            throw new RuntimeException(sprintf("error data: %s %s\n", $line, json_encode($data)));
         }
 
         $this->startTime = $data[0];

@@ -171,7 +171,7 @@ class Deliverer
                 }
             }
 
-            usleep(100);
+            usleep(100000);
         }
     }
 

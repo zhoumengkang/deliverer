@@ -2,7 +2,7 @@
 
 # 安装
 
-> 如果安装遇到任何问题，可以加我微信 zhoumengkang 一切解决
+> 如果安装遇到任何问题，可以加我微信 zhoumengkang
 
 ```bash
 $ phpize

@@ -181,12 +181,16 @@ class Deliverer
 
     public function requestIsEnd($file)
     {
-        $fp = fopen($file,"r");
-        fseek($fp, -1, SEEK_END);
+        $fp = fopen($file, "r");
 
-        $bool = trim(fgets($fp)) == TraceLogProcess::LOG_END_FLAG;
+        $offset = strlen(TraceLogProcess::LOG_END_FLAG) + 1;
+
+        fseek($fp, -1 * $offset, SEEK_END);
+
+        $bool = fgets($fp, $offset) == TraceLogProcess::LOG_END_FLAG;
 
         fclose($fp);
+
         return $bool;
     }
 
@@ -197,7 +201,7 @@ class Deliverer
 
         $process = new TraceLogProcess($this->stackDepth);
 
-        $fp = fopen($file,"r");
+        $fp = fopen($file, "r");
 
         while (!feof($fp)) {
             if ($lineNo > 0) {

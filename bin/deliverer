@@ -150,8 +150,7 @@ class Deliverer
     public function monitor()
     {
         if ($this->traceRequestId) {
-            $file = new SplFileObject($this->processedLogDir . $this->traceRequestId . ".log");
-            $this->read($file);
+            $this->read($this->processedLogDir . $this->traceRequestId . ".log");
             return;
         }
 
@@ -160,8 +159,7 @@ class Deliverer
         while (true) {
             foreach (new DirectoryIterator($this->logDir) as $fileInfo) {
                 if ($fileInfo->isDot()) continue;
-                $file    = new SplFileObject($fileInfo->getPath() . "/" . $fileInfo->getFilename());
-                $matched = $this->read($file);
+                $matched = $this->read($fileInfo->getPath() . "/" . $fileInfo->getFilename());
                 if ($matched) $traceNum++;
 
                 $this->rmLog($fileInfo->getFilename());
@@ -171,23 +169,25 @@ class Deliverer
                 }
             }
 
-            sleep(1);
+            usleep(100000);
         }
     }
 
-    private function read(SplFileObject $file)
+    private function read($file)
     {
         $lineNo  = 0;
         $matched = false;
 
         $process = new TraceLogProcess($this->stackDepth);
 
-        while (!$file->eof()) {
+        $fp = fopen($file,"r");
+
+        while (!feof($fp)) {
             if ($lineNo > 0) {
                 $lineNo++;
             }
 
-            $line = trim($file->fgets());
+            $line = trim(fgets($fp));
 
             if ($line == "---") {
                 $lineNo = 1;

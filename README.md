@@ -1,7 +1,9 @@
 `deliverer` 祖传代码跑路拯救者
-> 基于 7.2.5 开发，其他版本还未做兼容，本周跟上
 
 # 安装
+
+> 如果安装遇到任何问题，可以加我微信 zhoumengkang 一切解决
+
 ```bash
 $ phpize
 $ ./configure --with-php-config=/usr/local/php/bin/php-config
@@ -62,10 +64,3 @@ $ ./bin/deliverer -tSqlExecute::getAll -n1 -l3
 当要查询方法，函数调用栈过深，不在层级查询范围之内，则其外层调用显示红色
 
 ![3.jpg](https://static.mengkang.net/upload/image/2021/0623/1624420511944914.jpg)
-
-
-# todo
-
-1. 配置项优化
-2. 命令行和扩展联动配置
-2. 其他版本还未做兼容，本周跟上

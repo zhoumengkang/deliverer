@@ -129,7 +129,7 @@ class Deliverer
 
         foreach (new DirectoryIterator($this->logDir) as $fileInfo) {
             if ($fileInfo->isDot()) continue;
-            $this->rmLog($fileInfo->getFilename());
+            $this->mvLog($fileInfo->getFilename());
         }
     }
 
@@ -159,10 +159,16 @@ class Deliverer
         while (true) {
             foreach (new DirectoryIterator($this->logDir) as $fileInfo) {
                 if ($fileInfo->isDot()) continue;
-                $matched = $this->read($fileInfo->getPath() . "/" . $fileInfo->getFilename());
+
+                $file = $fileInfo->getPath() . "/" . $fileInfo->getFilename();
+
+                if (!$this->requestIsEnd($file)) continue;
+
+                $matched = $this->read($file);
+
                 if ($matched) $traceNum++;
 
-                $this->rmLog($fileInfo->getFilename());
+                $this->mvLog($fileInfo->getFilename());
 
                 if ($this->traceNum > 0 && $traceNum >= $this->traceNum) {
                     exit;
@@ -171,6 +177,17 @@ class Deliverer
 
             usleep(100000);
         }
+    }
+
+    public function requestIsEnd($file)
+    {
+        $fp = fopen($file,"r");
+        fseek($fp, -1, SEEK_END);
+
+        $bool = trim(fgets($fp)) == TraceLogProcess::LOG_END_FLAG;
+
+        fclose($fp);
+        return $bool;
     }
 
     private function read($file)
@@ -189,7 +206,7 @@ class Deliverer
 
             $line = trim(fgets($fp));
 
-            if ($line == "---") {
+            if ($line == TraceLogProcess::LOG_START_FLAG) {
                 $lineNo = 1;
                 continue;
             }
@@ -221,10 +238,12 @@ class Deliverer
             }
         }
 
+        fclose($fp);
+
         return $matched;
     }
 
-    private function rmLog($filename)
+    private function mvLog($filename)
     {
         copy($this->logDir . $filename, $this->processedLogDir . $filename);
         unlink($this->logDir . $filename);
@@ -291,6 +310,10 @@ class TraceLogProcess
      */
     private $currentFunction;
 
+    const LOG_START_FLAG = "---";
+
+    const LOG_END_FLAG = "---end---";
+
     /**
      * Process constructor.
      *
@@ -313,7 +336,7 @@ class TraceLogProcess
             return;
         }
 
-        if ($line == "---end---") {
+        if ($line == self::LOG_END_FLAG) {
             $this->popStack();
             return;
         }

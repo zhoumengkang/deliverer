@@ -200,22 +200,25 @@ PHP_RINIT_FUNCTION(deliverer)
 
     long ts = tv.tv_sec * 1000000 + tv.tv_usec;
 
-    char str[128] = {0};
-    sprintf(str, "/tmp/deliverer/log/%d-%ld.log", getpid(), ts);
-    fp = fopen(str, "a+");
+    char logfile[128] = {0};
+
+    sprintf(logfile, "/tmp/deliverer/log/%d-%ld.log", getpid(), ts);
+
+    fp = fopen(logfile, "a+");
+
+    chmod(logfile, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 
     if (strcmp(sapi_module.name, "cli") == 0) {
 
         char *cli_argv_string = build_deliverer_cli_argv();
 
-        fprintf(fp, "---\n%d-%ld %s %s\n", getpid(), tv.tv_sec * 1000000 + tv.tv_usec, sapi_module.name,
-                cli_argv_string);
+        fprintf(fp, "---\n%d-%ld %s %s\n", getpid(), ts, sapi_module.name, cli_argv_string);
 
         efree(cli_argv_string);
 
     } else {
-        fprintf(fp, "---\n%d-%ld %s %s %s %s\n", getpid(), tv.tv_sec * 1000000 + tv.tv_usec, sapi_module.name,
-                SG(request_info).request_method, SG(request_info).request_uri, SG(request_info).query_string);
+        fprintf(fp, "---\n%d-%ld %s %s %s %s\n", getpid(), ts, sapi_module.name, SG(request_info).request_method,
+                SG(request_info).request_uri, SG(request_info).query_string);
     }
 
     return SUCCESS;

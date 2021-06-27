@@ -36,17 +36,38 @@ static int deliverer_stat = -1;
 static FILE *fp;
 
 
-static char *get_function_name(zend_execute_data *call) /* {{{ */
+static char *get_function_name(zend_execute_data *execute_data) /* {{{ */
 {
-    if (!call) {
-        return NULL;
-    }
+    char *method_or_function_name = NULL;
 
-    zend_function    *fbc                     = call->func;
+#if PHP_VERSION_ID < 70000
+    zend_function *fbc           = execute_data->function_state.function;
+    const char    *function_name = fbc->common.function_name;
+
+    if (function_name == NULL) return NULL;
+
+    zend_class_entry *scope = fbc->common.scope;
+
+    if (scope != NULL) {
+        const char *class_name = scope->name;
+        int        len         = strlen(class_name) + strlen("::") + strlen(function_name) + 1;
+        method_or_function_name = (char *) emalloc(len);
+        memset(method_or_function_name, 0, len);
+        strcat(method_or_function_name, class_name);
+        strcat(method_or_function_name, "::");
+        strcat(method_or_function_name, function_name);
+    } else {
+        int len = strlen(function_name) + 1;
+        method_or_function_name = (char *) emalloc(len);
+        memset(method_or_function_name, 0, len);
+        strcat(method_or_function_name, function_name);
+    }
+#else
+    zend_function    *fbc                     = execute_data->call->func;
     zend_string      *function_name           = fbc->common.function_name;
     zend_class_entry *scope                   = fbc->common.scope;
     char             *class_name              = NULL;
-    char             *method_or_function_name = NULL;
+
     if (scope != NULL) {
         class_name = ZSTR_VAL(scope->name);
         int len    = strlen(class_name) + strlen("::") + ZSTR_LEN(function_name) + 1;
@@ -61,6 +82,7 @@ static char *get_function_name(zend_execute_data *call) /* {{{ */
         memset(method_or_function_name, 0, len);
         strcat(method_or_function_name, ZSTR_VAL(function_name));
     }
+#endif
 
     return method_or_function_name;
 }
@@ -72,13 +94,17 @@ static int php_deliverer_log_handler(zend_execute_data *execute_data) /* {{{ */
         return ZEND_USER_OPCODE_DISPATCH;
     }
 
-    zend_execute_data *call = execute_data->call;
-    zend_function     *fbc  = call->func;
+#if PHP_VERSION_ID < 70000
+    zend_function *fbc = execute_data->function_state.function;
+#else
+    zend_function *fbc = execute_data->call->func;
+#endif
 
     if (fbc->type != ZEND_USER_FUNCTION) {
         return ZEND_USER_OPCODE_DISPATCH;
     }
-    char *method_or_function_name = get_function_name(call);
+
+    char *method_or_function_name = get_function_name(execute_data);
 
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -102,17 +128,50 @@ static void set_deliverer_stat()  /* {{{ */
 }
 /* }}} */
 
+static char *build_deliverer_cli_argv()  /* {{{ */
+{
+    char *cli_argv_string;
+
+    int len = 0;
+    int i;
+
+    if (SG(request_info).argc > 0) {
+
+        for (i = 0; i < SG(request_info).argc; i++) {
+            len += strlen(SG(request_info).argv[i]);
+        }
+
+        len += SG(request_info).argc;
+
+        cli_argv_string = (char *) emalloc(len + SG(request_info).argc);
+
+        memset(cli_argv_string, 0, len);
+
+        for (i = 0; i < SG(request_info).argc; i++) {
+            strcat(cli_argv_string, SG(request_info).argv[i]);
+            strcat(cli_argv_string, " ");
+        }
+    }
+
+    return cli_argv_string;
+}
+/* }}} */
+
 /* {{{ PHP_MINIT_FUNCTION
  */
 PHP_MINIT_FUNCTION(deliverer)
 {
+
+#if PHP_VERSION_ID < 70000
+#else
     zend_set_user_opcode_handler(ZEND_DO_UCALL, php_deliverer_log_handler);
+#endif
+
     zend_set_user_opcode_handler(ZEND_DO_FCALL_BY_NAME, php_deliverer_log_handler);
     zend_set_user_opcode_handler(ZEND_DO_FCALL, php_deliverer_log_handler);
 	return SUCCESS;
 }
 /* }}} */
-
 
 /* {{{ PHP_MSHUTDOWN_FUNCTION
  */
@@ -127,7 +186,7 @@ PHP_MSHUTDOWN_FUNCTION(deliverer)
 PHP_RINIT_FUNCTION(deliverer)
 {
 #if defined(COMPILE_DL_DELIVERER) && defined(ZTS)
-	ZEND_TSRMLS_CACHE_UPDATE();
+    ZEND_TSRMLS_CACHE_UPDATE();
 #endif
 
     set_deliverer_stat();
@@ -136,17 +195,30 @@ PHP_RINIT_FUNCTION(deliverer)
         return SUCCESS;
     }
 
-	struct timeval tv;
+    struct timeval tv;
     gettimeofday(&tv, NULL);
 
-	long ts = tv.tv_sec * 1000000 + tv.tv_usec;
+    long ts = tv.tv_sec * 1000000 + tv.tv_usec;
 
-	char str[128] = {0};
+    char str[128] = {0};
     sprintf(str, "/tmp/deliverer/log/%d-%ld.log", getpid(), ts);
     fp = fopen(str, "a+");
-    fprintf(fp, "---\n%d-%ld %s %s %s?%s\n",getpid() , tv.tv_sec * 1000000 + tv.tv_usec, sapi_module.name, SG(request_info).request_method, SG(request_info).request_uri, SG(request_info).query_string);
 
-	return SUCCESS;
+    if (strcmp(sapi_module.name, "cli") == 0) {
+
+        char *cli_argv_string = build_deliverer_cli_argv();
+
+        fprintf(fp, "---\n%d-%ld %s %s\n", getpid(), tv.tv_sec * 1000000 + tv.tv_usec, sapi_module.name,
+                cli_argv_string);
+
+        efree(cli_argv_string);
+
+    } else {
+        fprintf(fp, "---\n%d-%ld %s %s %s %s\n", getpid(), tv.tv_sec * 1000000 + tv.tv_usec, sapi_module.name,
+                SG(request_info).request_method, SG(request_info).request_uri, SG(request_info).query_string);
+    }
+
+    return SUCCESS;
 }
 /* }}} */
 

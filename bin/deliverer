@@ -1,6 +1,9 @@
 #!/usr/bin/env php
 <?php
 
+ini_set("display_errors", "On");
+error_reporting(E_ALL);
+
 $deliverer = new Deliverer($argv);
 $deliverer->monitor();
 
@@ -8,9 +11,9 @@ class Deliverer
 {
     const WORK_SPACE = "/tmp/deliverer";
 
-    private $logDir          = self::WORK_SPACE . "/log/";
-    private $processedLogDir = self::WORK_SPACE . "/history/";
-    private $configDir       = self::WORK_SPACE . "/config/";
+    private $logDir;
+    private $processedLogDir;
+    private $configDir;
 
     private $stat = "stat";
 
@@ -41,6 +44,10 @@ class Deliverer
 
     public function __construct($argv)
     {
+        $this->logDir          = self::WORK_SPACE . "/log/";
+        $this->processedLogDir = self::WORK_SPACE . "/history/";
+        $this->configDir       = self::WORK_SPACE . "/config/";
+
         $shortOpts = "t::l:n:v:rh";
         $longOpts  = ["trace::", "level:", "number:", "view:", "route", "help"];
         $options   = getopt($shortOpts, $longOpts);

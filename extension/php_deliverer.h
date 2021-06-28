@@ -12,7 +12,7 @@
   | obtain it through the world-wide-web, please send a note to          |
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
-  | Author:                                                              |
+  | Author: mengkang <i@mengkang.net>                                    |
   +----------------------------------------------------------------------+
 */
 
@@ -24,7 +24,7 @@
 extern zend_module_entry deliverer_module_entry;
 #define phpext_deliverer_ptr &deliverer_module_entry
 
-#define PHP_DELIVERER_VERSION "0.1.0" /* Replace with version number for your extension */
+#define PHP_DELIVERER_VERSION "1.0.3"
 
 #ifdef PHP_WIN32
 #	define PHP_DELIVERER_API __declspec(dllexport)

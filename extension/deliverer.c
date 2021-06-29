@@ -233,7 +233,7 @@ PHP_RSHUTDOWN_FUNCTION(deliverer)
         return SUCCESS;
     }
 
-	fprintf(fp, "---end---\n");
+	fprintf(fp, "---end---");
     fclose(fp);
 	return SUCCESS;
 }

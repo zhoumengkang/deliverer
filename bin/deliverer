@@ -190,7 +190,7 @@ class Deliverer
     {
         $fp = fopen($file, "r");
 
-        $offset = strlen(TraceLogProcess::LOG_END_FLAG) + 1;
+        $offset = strlen(TraceLogProcess::LOG_END_FLAG);
 
         fseek($fp, -1 * $offset, SEEK_END);
 

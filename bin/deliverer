@@ -49,7 +49,7 @@ class Deliverer
         $this->configDir       = self::WORK_SPACE . "/config/";
 
         $shortOpts = "t::l:n:v:r:h";
-        $longOpts  = ["trace::", "level:", "number:", "view:", "route", "help"];
+        $longOpts  = ["trace::", "level:", "number:", "view:", "route:", "help"];
         $options   = getopt($shortOpts, $longOpts);
 
         foreach ($options as $k => $v) {

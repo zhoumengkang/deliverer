@@ -48,7 +48,7 @@ class Deliverer
         $this->processedLogDir = self::WORK_SPACE . "/history/";
         $this->configDir       = self::WORK_SPACE . "/config/";
 
-        $shortOpts = "t::l:n:v:rh";
+        $shortOpts = "t::l:n:v:r:h";
         $longOpts  = ["trace::", "level:", "number:", "view:", "route", "help"];
         $options   = getopt($shortOpts, $longOpts);
 
@@ -256,8 +256,7 @@ class Deliverer
 
     private function mvLog($filename)
     {
-        copy($this->logDir . $filename, $this->processedLogDir . $filename);
-        unlink($this->logDir . $filename);
+        rename($this->logDir . $filename, $this->processedLogDir . $filename);
     }
 }
 

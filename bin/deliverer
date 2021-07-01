@@ -196,7 +196,7 @@ class Deliverer
 
         $bool = fgets($fp, $offset) == TraceLogProcess::LOG_END_FLAG;
 
-        if (!$bool) printf("writing: %s", $file);
+//        if (!$bool) printf("writing: %s\n", $file);
 
         fclose($fp);
 

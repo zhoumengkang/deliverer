@@ -28,7 +28,7 @@
 #include "php_deliverer.h"
 #include "main/SAPI.h"
 
-#if (PHP_MAJOR_VERSION == 5) && (PHP_MINOR_VERSION < 4)
+#if PHP_VERSION_ID < 50400
 #define OP1_FUNCTION_PTR(n) (&(n)->op1.u.constant)
 #else
 #define OP1_FUNCTION_PTR(n) ((n)->op1.zv)
@@ -115,11 +115,15 @@ static int php_deliverer_log_handler(zend_execute_data *execute_data) /* {{{ */
     }
 
 #if PHP_VERSION_ID < 70000
+    #if PHP_VERSION_ID < 50400
     zend_function *fbc = execute_data->fbc; // function inner call
 
     if (fbc == NULL) {
         fbc = get_function_from_opline(execute_data->opline);
     }
+    #else
+    zend_function *fbc = get_function_from_opline(execute_data->opline);
+    #endif
 #else
     zend_function *fbc = execute_data->call->func;
 #endif

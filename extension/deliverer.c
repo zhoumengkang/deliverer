@@ -28,6 +28,11 @@
 #include "php_deliverer.h"
 #include "main/SAPI.h"
 
+#if (PHP_MAJOR_VERSION == 5) && (PHP_MINOR_VERSION < 4)
+#define OP1_FUNCTION_PTR(n) (&(n)->op1.u.constant)
+#else
+#define OP1_FUNCTION_PTR(n) ((n)->op1.zv)
+#endif
 
 static int le_deliverer;
 
@@ -36,13 +41,12 @@ static int deliverer_stat = -1;
 static FILE *fp;
 
 
-static char *get_function_name(zend_execute_data *execute_data) /* {{{ */
+static char *get_function_name(zend_function *fbc) /* {{{ */
 {
     char *method_or_function_name = NULL;
 
 #if PHP_VERSION_ID < 70000
-    zend_function *fbc           = execute_data->function_state.function;
-    const char    *function_name = fbc->common.function_name;
+    const char *function_name = fbc->common.function_name;
 
     if (function_name == NULL) return NULL;
 
@@ -63,10 +67,9 @@ static char *get_function_name(zend_execute_data *execute_data) /* {{{ */
         strcat(method_or_function_name, function_name);
     }
 #else
-    zend_function    *fbc                     = execute_data->call->func;
-    zend_string      *function_name           = fbc->common.function_name;
-    zend_class_entry *scope                   = fbc->common.scope;
-    char             *class_name              = NULL;
+    zend_string      *function_name = fbc->common.function_name;
+    zend_class_entry *scope         = fbc->common.scope;
+    char             *class_name    = NULL;
 
     if (scope != NULL) {
         class_name = ZSTR_VAL(scope->name);
@@ -88,6 +91,22 @@ static char *get_function_name(zend_execute_data *execute_data) /* {{{ */
 }
 /* }}} */
 
+static zend_function *get_function_from_opline(zend_op *opline) /* {{{ */
+{
+	zend_function *fbc;
+	
+	zval *function_name = OP1_FUNCTION_PTR(opline);
+
+	if (Z_STRVAL_P(function_name) == NULL) return NULL;
+	
+	if (zend_hash_find(EG(function_table), Z_STRVAL_P(function_name), Z_STRLEN_P(function_name)+1, (void**)&fbc) == FAILURE) {
+		return NULL;
+	}
+
+	return fbc;
+}
+/* }}} */
+
 static int php_deliverer_log_handler(zend_execute_data *execute_data) /* {{{ */
 {
     if (deliverer_stat == -1) {
@@ -95,22 +114,24 @@ static int php_deliverer_log_handler(zend_execute_data *execute_data) /* {{{ */
     }
 
 #if PHP_VERSION_ID < 70000
-    zend_function *fbc = execute_data->function_state.function;
+	zend_op *opline = execute_data->opline;
+	zend_function *fbc = get_function_from_opline(opline);
 #else
     zend_function *fbc = execute_data->call->func;
 #endif
+
+	if (fbc == NULL) return ZEND_USER_OPCODE_DISPATCH;
 
     if (fbc->type != ZEND_USER_FUNCTION) {
         return ZEND_USER_OPCODE_DISPATCH;
     }
 
-    char *method_or_function_name = get_function_name(execute_data);
+    char *method_or_function_name = get_function_name(fbc);
 
     struct timeval tv;
     gettimeofday(&tv, NULL);
     const char *filename = zend_get_executed_filename();
     int        lineno    = zend_get_executed_lineno();
-
 
     //format pid-time|current_p|prev_p|function|filename|line
     fprintf(fp, "%ld|%p|%p|%s|%s|%d\n", tv.tv_sec * 1000000 + tv.tv_usec, execute_data, execute_data->prev_execute_data,
@@ -173,6 +194,7 @@ PHP_MINIT_FUNCTION(deliverer)
 }
 /* }}} */
 
+
 /* {{{ PHP_MSHUTDOWN_FUNCTION
  */
 PHP_MSHUTDOWN_FUNCTION(deliverer)
@@ -200,25 +222,22 @@ PHP_RINIT_FUNCTION(deliverer)
 
     long ts = tv.tv_sec * 1000000 + tv.tv_usec;
 
-    char logfile[128] = {0};
-
-    sprintf(logfile, "/tmp/deliverer/log/%d-%ld.log", getpid(), ts);
-
-    fp = fopen(logfile, "a+");
-
-    chmod(logfile, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+    char str[128] = {0};
+    sprintf(str, "/tmp/deliverer/log/%d-%ld.log", getpid(), ts);
+    fp = fopen(str, "a+");
 
     if (strcmp(sapi_module.name, "cli") == 0) {
 
         char *cli_argv_string = build_deliverer_cli_argv();
 
-        fprintf(fp, "---\n%d-%ld %s %s\n", getpid(), ts, sapi_module.name, cli_argv_string);
+        fprintf(fp, "---\n%d-%ld %s %s\n", getpid(), tv.tv_sec * 1000000 + tv.tv_usec, sapi_module.name,
+                cli_argv_string);
 
         efree(cli_argv_string);
 
     } else {
-        fprintf(fp, "---\n%d-%ld %s %s %s %s\n", getpid(), ts, sapi_module.name, SG(request_info).request_method,
-                SG(request_info).request_uri, SG(request_info).query_string);
+        fprintf(fp, "---\n%d-%ld %s %s %s %s\n", getpid(), tv.tv_sec * 1000000 + tv.tv_usec, sapi_module.name,
+                SG(request_info).request_method, SG(request_info).request_uri, SG(request_info).query_string);
     }
 
     return SUCCESS;

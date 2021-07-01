@@ -190,11 +190,13 @@ class Deliverer
     {
         $fp = fopen($file, "r");
 
-        $offset = strlen(TraceLogProcess::LOG_END_FLAG);
+        $offset = strlen(TraceLogProcess::LOG_END_FLAG) + 1;
 
         fseek($fp, -1 * $offset, SEEK_END);
 
         $bool = fgets($fp, $offset) == TraceLogProcess::LOG_END_FLAG;
+
+        if (!$bool) printf("writing: %s", $file);
 
         fclose($fp);
 

@@ -93,17 +93,18 @@ static char *get_function_name(zend_function *fbc) /* {{{ */
 
 static zend_function *get_function_from_opline(zend_op *opline) /* {{{ */
 {
-	zend_function *fbc;
-	
-	zval *function_name = OP1_FUNCTION_PTR(opline);
+    zend_function *fbc;
 
-	if (Z_STRVAL_P(function_name) == NULL) return NULL;
-	
-	if (zend_hash_find(EG(function_table), Z_STRVAL_P(function_name), Z_STRLEN_P(function_name)+1, (void**)&fbc) == FAILURE) {
-		return NULL;
-	}
+    zval *function_name = OP1_FUNCTION_PTR(opline);
 
-	return fbc;
+    if (Z_STRVAL_P(function_name) == NULL) return NULL;
+
+    if (zend_hash_find(EG(function_table), Z_STRVAL_P(function_name), Z_STRLEN_P(function_name) + 1, (void **) &fbc) ==
+        FAILURE) {
+        return NULL;
+    }
+
+    return fbc;
 }
 /* }}} */
 
@@ -114,13 +115,16 @@ static int php_deliverer_log_handler(zend_execute_data *execute_data) /* {{{ */
     }
 
 #if PHP_VERSION_ID < 70000
-	zend_op *opline = execute_data->opline;
-	zend_function *fbc = get_function_from_opline(opline);
+    zend_function *fbc = execute_data->fbc; // function inner call
+
+    if (fbc == NULL) {
+        fbc = get_function_from_opline(execute_data->opline);
+    }
 #else
     zend_function *fbc = execute_data->call->func;
 #endif
 
-	if (fbc == NULL) return ZEND_USER_OPCODE_DISPATCH;
+    if (fbc == NULL) return ZEND_USER_OPCODE_DISPATCH;
 
     if (fbc->type != ZEND_USER_FUNCTION) {
         return ZEND_USER_OPCODE_DISPATCH;

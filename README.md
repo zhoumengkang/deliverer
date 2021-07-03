@@ -4,8 +4,10 @@ PHP 祖传代码跑路拯救者，支持 PHP5 & PHP7
 
 - [x] 5.3.29 CLI
 - [ ] 5.3.29 PHP-FPM
+- [x] 5.4.32 CLI
+- [x] 5.4.32 PHP-FPM
 - [x] 5.6.40 CLI
-- [ ] 5.6.40 PHP-FPM
+- [x] 5.6.40 PHP-FPM
 - [x] 7.2.5 CLI
 - [x] 7.2.5 PHP-FPM
 

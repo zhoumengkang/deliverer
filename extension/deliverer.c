@@ -117,7 +117,7 @@ static int php_deliverer_log_handler(zend_execute_data *execute_data) /* {{{ */
     zend_function *fbc;
 
 #if PHP_VERSION_ID < 70000
-    #if PHP_VERSION_ID < 50400
+    #if PHP_VERSION_ID < 50500
     if (execute_data->fbc != NULL) fbc = execute_data->fbc; // function inner call
     #else
     if (execute_data->call != NULL) fbc = execute_data->call->fbc;// function inner call

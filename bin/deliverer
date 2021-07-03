@@ -249,6 +249,8 @@ class Deliverer
             }
         }
 
+        $process->clearAllFunctionPoint();
+
         fclose($fp);
 
         return $matched;
@@ -325,6 +327,23 @@ class TraceLogProcess
     const LOG_END_FLAG = "---end---";
 
     /**
+     * @var []
+     */
+    private static $allFunctionPoint;
+
+    public function addFunctionPoint($point)
+    {
+        if(!in_array($point,self::$allFunctionPoint)){
+            self::$allFunctionPoint[] = $point;
+        }
+    }
+
+    public function clearAllFunctionPoint()
+    {
+        self::$allFunctionPoint = [];
+    }
+
+    /**
      * Process constructor.
      *
      * @param int    $stackMaxDepth
@@ -360,8 +379,9 @@ class TraceLogProcess
     private function pushStack(PhpFunction $function)
     {
         $this->currentFunction = $function;
+        $this->addFunctionPoint($function->point);
 
-        if ($function->prevPoint == $this->stackRootPoint) {
+        if ($function->prevPoint == $this->stackRootPoint || !in_array($function->prevPoint, self::$allFunctionPoint)) {
             $this->popStack();
         }
 

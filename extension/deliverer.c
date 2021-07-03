@@ -143,7 +143,7 @@ static int php_deliverer_log_handler(zend_execute_data *execute_data) /* {{{ */
     const char *filename = zend_get_executed_filename();
     int        lineno    = zend_get_executed_lineno();
 
-    //format pid-time|current_p|prev_p|function|filename|line
+    //format time|current_p|prev_p|function|filename|line
     fprintf(fp, "%ld|%p|%p|%s|%s|%d\n", tv.tv_sec * 1000000 + tv.tv_usec, execute_data, execute_data->prev_execute_data,
             method_or_function_name, filename, lineno);
 

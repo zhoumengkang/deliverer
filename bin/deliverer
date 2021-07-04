@@ -49,7 +49,7 @@ class Deliverer
         $this->configDir       = self::WORK_SPACE . "/config/";
 
         $shortOpts = "t::l:n:v:r:h";
-        $longOpts  = ["trace::", "level:", "number:", "view:", "route:", "help"];
+        $longOpts  = array("trace::", "level:", "number:", "view:", "route:", "help");
         $options   = getopt($shortOpts, $longOpts);
 
         foreach ($options as $k => $v) {
@@ -120,10 +120,22 @@ class Deliverer
 
     private function setSignalHandler()
     {
+        if (!function_exists("pcntl_signal")) {
+            $this->cleanLog();
+            return;
+        }
+
         declare(ticks=1);
         pcntl_signal(SIGINT, function () {
             exit;
         });
+    }
+
+    private function cleanLog(){
+        foreach (new DirectoryIterator($this->logDir) as $fileInfo) {
+            if ($fileInfo->isDot()) continue;
+            $this->mvLog($fileInfo->getFilename());
+        }
     }
 
     public function stop()
@@ -134,10 +146,7 @@ class Deliverer
             unlink($stat);
         }
 
-        foreach (new DirectoryIterator($this->logDir) as $fileInfo) {
-            if ($fileInfo->isDot()) continue;
-            $this->mvLog($fileInfo->getFilename());
-        }
+        $this->cleanLog();
     }
 
     private function help()
@@ -309,7 +318,7 @@ class TraceLogProcess
     /**
      * @var PhpFunction[]
      */
-    private $stack = [];
+    private $stack = array();
 
     private $stackMaxDepth;
 
@@ -340,7 +349,7 @@ class TraceLogProcess
 
     public function clearAllFunctionPoint()
     {
-        self::$allFunctionPoint = [];
+        self::$allFunctionPoint = array();
     }
 
     /**
@@ -466,7 +475,7 @@ class TraceLogProcess
             unset($function);
         }
 
-        $this->stack             = [];
+        $this->stack             = array();
         $this->stackCurrentDepth = 0;
     }
 

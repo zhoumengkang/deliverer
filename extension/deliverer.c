@@ -28,7 +28,8 @@
 #include "php_deliverer.h"
 #include "main/SAPI.h"
 
-#if PHP_VERSION_ID < 50400
+#if PHP_VERSION_ID < 70000
+#elif PHP_VERSION_ID < 50400
 #define OP1_FUNCTION_PTR(n) (&(n)->op1.u.constant)
 #else
 #define OP1_FUNCTION_PTR(n) ((n)->op1.zv)
@@ -100,6 +101,7 @@ static char *get_function_name(zend_function *fbc) /* {{{ */
 }
 /* }}} */
 
+#if PHP_VERSION_ID < 70000
 static zend_function *get_function_from_opline(zend_op *opline) /* {{{ */
 {
     zend_function *fbc;
@@ -120,8 +122,15 @@ static zend_function *get_function_from_opline(zend_op *opline) /* {{{ */
     return fbc;
 }
 /* }}} */
+#endif
 
-static int php_deliverer_log_handler(zend_execute_data *execute_data) /* {{{ */
+/* {{{ php_deliverer_log_handler(zend_execute_data *execute_data)
+ */
+#if PHP_VERSION_ID < 70000
+static int php_deliverer_log_handler(ZEND_OPCODE_HANDLER_ARGS)
+#else
+static int php_deliverer_log_handler(zend_execute_data *execute_data)
+#endif
 {
     if (deliverer_stat == -1)
     {
@@ -131,17 +140,17 @@ static int php_deliverer_log_handler(zend_execute_data *execute_data) /* {{{ */
     zend_function *fbc;
 
 #if PHP_VERSION_ID < 70000
-#if PHP_VERSION_ID < 50500
+    #if PHP_VERSION_ID < 50500
     if (execute_data->fbc != NULL)
     {
         fbc = execute_data->fbc; // function inner call
     }
-#else
+    #else
     if (execute_data->call != NULL && execute_data->call->fbc != NULL)
     {
         fbc = execute_data->call->fbc; // function inner call
     }
-#endif
+    #endif
     if (fbc == NULL)
     {
         fbc = get_function_from_opline(execute_data->opline);
@@ -149,7 +158,7 @@ static int php_deliverer_log_handler(zend_execute_data *execute_data) /* {{{ */
 #else
     if (execute_data->call != NULL && execute_data->call->func != NULL)
     {
-        fbc = execute_data->call->fbc;
+        fbc = execute_data->call->func;
     }
 #endif
 

@@ -67,11 +67,11 @@ class Deliverer
             }
 
             if ($k == "n" || $k == "number") {
-                $this->traceNum = intval($v);
+                $this->traceNum = (int)$v;
             }
 
             if ($k == "l" || $k == "level") {
-                $this->stackDepth = intval($v);
+                $this->stackDepth = (int)$v;
             }
 
             if ($k == "v" || $k == "view") {
@@ -197,7 +197,7 @@ class Deliverer
 
     public function requestIsEnd($file)
     {
-        $fp = fopen($file, "r");
+        $fp = fopen($file, 'rb');
 
         $offset = strlen(TraceLogProcess::LOG_END_FLAG);
 
@@ -342,6 +342,10 @@ class TraceLogProcess
 
     public function addFunctionPoint($point)
     {
+        if (empty(self::$allFunctionPoint)){
+            self::$allFunctionPoint[] = $point;
+            return;
+        }
         if(!in_array($point,self::$allFunctionPoint)){
             self::$allFunctionPoint[] = $point;
         }
@@ -470,7 +474,7 @@ class TraceLogProcess
                 $lastData .= " \033[1;33m(+ " . $function->hiddenNum . ")\033[0m";
             }
 
-            printf($format, intval($function->useTime) / 1000, $function->method, $function->file, $lastData);
+            printf($format, (int)$function->useTime / 1000, $function->method, $function->file, $lastData);
 
             unset($function);
         }

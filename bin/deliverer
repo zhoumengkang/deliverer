@@ -197,7 +197,7 @@ class Deliverer
 
     public function requestIsEnd($file)
     {
-        $fp = fopen($file, "r");
+        $fp = fopen($file, 'rb');
 
         $offset = strlen(TraceLogProcess::LOG_END_FLAG);
 

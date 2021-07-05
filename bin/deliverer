@@ -44,13 +44,13 @@ class Deliverer
 
     public function __construct($argv)
     {
-        $this->logDir          = self::WORK_SPACE . "/log/";
+        $this->logDir = self::WORK_SPACE . "/log/";
         $this->processedLogDir = self::WORK_SPACE . "/history/";
-        $this->configDir       = self::WORK_SPACE . "/config/";
+        $this->configDir = self::WORK_SPACE . "/config/";
 
         $shortOpts = "t::l:n:v:r:h";
-        $longOpts  = array("trace::", "level:", "number:", "view:", "route:", "help");
-        $options   = getopt($shortOpts, $longOpts);
+        $longOpts = array("trace::", "level:", "number:", "view:", "route:", "help");
+        $options = getopt($shortOpts, $longOpts);
 
         foreach ($options as $k => $v) {
 
@@ -76,7 +76,7 @@ class Deliverer
 
             if ($k == "v" || $k == "view") {
                 $this->traceRequestId = $v;
-                $this->stackDepth     = $this->stackDepth > 50 ? $this->stackDepth : 50;
+                $this->stackDepth = $this->stackDepth > 50 ? $this->stackDepth : 50;
             }
         }
 
@@ -125,13 +125,14 @@ class Deliverer
             return;
         }
 
-        declare(ticks=1);
+        declare(ticks = 1);
         pcntl_signal(SIGINT, function () {
             exit;
         });
     }
 
-    private function cleanLog(){
+    private function cleanLog()
+    {
         foreach (new DirectoryIterator($this->logDir) as $fileInfo) {
             if ($fileInfo->isDot()) continue;
             $this->mvLog($fileInfo->getFilename());
@@ -212,7 +213,7 @@ class Deliverer
 
     private function read($file)
     {
-        $lineNo  = 0;
+        $lineNo = 0;
         $matched = false;
 
         $process = new TraceLogProcess($this->stackDepth);
@@ -305,11 +306,11 @@ class PhpFunction
         }
 
         $this->startTime = $data[0];
-        $this->point     = $data[1];
+        $this->point = $data[1];
         $this->prevPoint = $data[2];
-        $this->method    = $data[3];
-        $this->file      = $data[4];
-        $this->line      = $data[5];
+        $this->method = $data[3];
+        $this->file = $data[4];
+        $this->line = $data[5];
     }
 }
 
@@ -342,11 +343,11 @@ class TraceLogProcess
 
     public function addFunctionPoint($point)
     {
-        if (empty(self::$allFunctionPoint)){
+        if (empty(self::$allFunctionPoint)) {
             self::$allFunctionPoint[] = $point;
             return;
         }
-        if(!in_array($point,self::$allFunctionPoint)){
+        if (!in_array($point, self::$allFunctionPoint)) {
             self::$allFunctionPoint[] = $point;
         }
     }
@@ -364,7 +365,7 @@ class TraceLogProcess
      */
     public function __construct($stackMaxDepth = 5, $stackRootPoint = "(nil)")
     {
-        $this->stackMaxDepth  = $stackMaxDepth;
+        $this->stackMaxDepth = $stackMaxDepth;
         $this->stackRootPoint = $stackRootPoint;
     }
 
@@ -383,7 +384,7 @@ class TraceLogProcess
             return;
         }
 
-        $phpFunction         = new PhpFunction($line);
+        $phpFunction = new PhpFunction($line);
         $phpFunction->status = $isHit ? 1 : 0;
 
         $this->pushStack($phpFunction);
@@ -399,10 +400,10 @@ class TraceLogProcess
         }
 
         if (empty($this->stack)) {
-            $function->level         = 1;
+            $function->level = 1;
             $this->stackCurrentDepth = $function->level;
-            $function->useTime       = 0;
-            $this->stack[]           = $function;
+            $function->useTime = 0;
+            $this->stack[] = $function;
 
             return true;
         }
@@ -479,7 +480,7 @@ class TraceLogProcess
             unset($function);
         }
 
-        $this->stack             = array();
+        $this->stack = array();
         $this->stackCurrentDepth = 0;
     }
 

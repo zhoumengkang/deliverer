@@ -44,18 +44,27 @@ class Deliverer
 
     public function __construct($argv)
     {
-        $this->logDir = self::WORK_SPACE . "/log/";
-        $this->processedLogDir = self::WORK_SPACE . "/history/";
-        $this->configDir = self::WORK_SPACE . "/config/";
+        $log = "ICAgLyQkJCQkJCQgICAgICAgICAgICAvJCQgLyQkCiAgfCAkJF9fICAkJCAgICAgICAgICB8ICQkfF9fLwogIHwgJCQgIFwgJCQgIC8kJCQkJCQgfCAkJCAvJCQgLyQkICAgIC8kJCAvJCQkJCQkICAgLyQkJCQkJCAgIC8kJCQkJCQgICAvJCQkJCQkCiAgfCAkJCAgfCAkJCAvJCRfXyAgJCR8ICQkfCAkJHwgICQkICAvJCQvLyQkX18gICQkIC8kJF9fICAkJCAvJCRfXyAgJCQgLyQkX18gICQkCiAgfCAkJCAgfCAkJHwgJCQkJCQkJCR8ICQkfCAkJCBcICAkJC8kJC98ICQkJCQkJCQkfCAkJCAgXF9fL3wgJCQkJCQkJCR8ICQkICBcX18vCiAgfCAkJCAgfCAkJHwgJCRfX19fXy98ICQkfCAkJCAgXCAgJCQkLyB8ICQkX19fX18vfCAkJCAgICAgIHwgJCRfX19fXy98ICQkCiAgfCAkJCQkJCQkL3wgICQkJCQkJCR8ICQkfCAkJCAgIFwgICQvICB8ICAkJCQkJCQkfCAkJCAgICAgIHwgICQkJCQkJCR8ICQkCiAgfF9fX19fX18vICBcX19fX19fXy98X18vfF9fLyAgICBcXy8gICAgXF9fX19fX18vfF9fLyAgICAgICBcX19fX19fXy98X18v";
+        Logger::success("\n" . base64_decode($log) . "\n\n");
 
-        $shortOpts = "t::l:n:v:r:h";
-        $longOpts = array("trace::", "level:", "number:", "view:", "route:", "help");
-        $options = getopt($shortOpts, $longOpts);
+        $this->logDir          = self::WORK_SPACE . "/log/";
+        $this->processedLogDir = self::WORK_SPACE . "/history/";
+        $this->configDir       = self::WORK_SPACE . "/config/";
+
+        $shortOpts = "t::l:n:v:r:ch";
+        $longOpts  = ["trace::", "level:", "number:", "view:", "route:", "check", "help"];
+        $options   = getopt($shortOpts, $longOpts);
 
         foreach ($options as $k => $v) {
 
             if ($k == "h" || $k == "help") {
                 $this->help();
+            }
+
+            if ($k == "c" || $k == "check") {
+                $envCheck = new EnvCheck();
+                $envCheck->run();
+                exit;
             }
 
             if ($k == "r" || $k == "route") {
@@ -76,7 +85,7 @@ class Deliverer
 
             if ($k == "v" || $k == "view") {
                 $this->traceRequestId = $v;
-                $this->stackDepth = $this->stackDepth > 50 ? $this->stackDepth : 50;
+                $this->stackDepth     = $this->stackDepth > 50 ? $this->stackDepth : 50;
             }
         }
 
@@ -101,7 +110,7 @@ class Deliverer
         $file = $this->configDir . $this->stat;
 
         if (file_exists($file)) {
-            printf("monitor pid:[%d] is running\n", file_get_contents($file));
+            Logger::warning("monitor pid:[" . file_get_contents($file) . "] is running.");
             exit;
         }
 
@@ -125,7 +134,7 @@ class Deliverer
             return;
         }
 
-        declare(ticks = 1);
+        declare(ticks=1);
         pcntl_signal(SIGINT, function () {
             exit;
         });
@@ -133,9 +142,11 @@ class Deliverer
 
     private function cleanLog()
     {
-        foreach (new DirectoryIterator($this->logDir) as $fileInfo) {
-            if ($fileInfo->isDot()) continue;
-            $this->mvLog($fileInfo->getFilename());
+        if (file_exists($this->logDir)) {
+            foreach (new DirectoryIterator($this->logDir) as $fileInfo) {
+                if ($fileInfo->isDot()) continue;
+                $this->mvLog($fileInfo->getFilename());
+            }
         }
     }
 
@@ -154,13 +165,13 @@ class Deliverer
     {
         echo "Usage: deliverer [OPTION]...
   -h,  --help                      print this help
+  -c,  --check                     check php env
   -r,  --route                     trace filter by http url route
   -t,  --trace                     trace function or method, default value is all user function
   -l,  --level                     trace function stack depth, default value is 5    
   -n,  --number                    execution times and exit
   
-  more info : https://mengkang.net/1473.html
-";
+more info : https://mengkang.net/1473.html\n\n";
         exit;
     }
 
@@ -213,7 +224,7 @@ class Deliverer
 
     private function read($file)
     {
-        $lineNo = 0;
+        $lineNo  = 0;
         $matched = false;
 
         $process = new TraceLogProcess($this->stackDepth);
@@ -272,6 +283,138 @@ class Deliverer
     }
 }
 
+class Logger
+{
+    public static function cmd($log)
+    {
+        echo "[Deliverer] " . $log . "\n";
+    }
+
+    public static function success($log)
+    {
+        printf("\e[32m%s\e[0m\n", $log);
+    }
+
+    public static function warning($log)
+    {
+        printf("\e[31m%s\e[0m\n", $log);
+    }
+}
+
+class EnvCheck
+{
+    private $popenEnable = true;
+
+    public function __construct()
+    {
+        $disabled = explode(',', ini_get('disable_functions'));
+        $cmd      = "popen";
+
+        foreach ($disabled as $key => $value) {
+            if (strlen(trim($value)) == 0) {
+                unset($disabled[$key]);
+            }
+        }
+
+        if (!empty($disabled) && in_array($cmd, $disabled)) {
+            Logger::cmd("popen is disabled.");
+            Logger::cmd("if you want to check php env by deliverer, you can edit the php.ini and remove popen from disable_functions.");
+            Logger::cmd("where is php.ini ? run it in shell: \e[32m php -i|grep php.ini\e[0m\n");
+            $this->popenEnable = false;
+        }
+    }
+
+    public function run()
+    {
+        if (!$this->popenEnable) {
+            return;
+        }
+
+        $isRunning = $this->fpmIsRunning();
+
+        if (!$isRunning) {
+            return;
+        }
+
+        $fpmPath = $this->getFpmPath();
+
+        $this->delivererCheck($fpmPath);
+    }
+
+    /**
+     * # ps -ef|grep php-fpm|grep "master process"|grep -v grep
+     * root     17593     1  0 Jul05 ?        00:00:00 php-fpm: master process (/data/local/php72/etc/php-fpm.conf)
+     * root     21769     1  0 02:00 ?        00:00:00 php-fpm: master process (/usr/local/php/etc/php-fpm.conf)
+     * root     25468     1  0 14:07 ?        00:00:00 php-fpm: master process (/usr/local/php5/etc/php-fpm.conf)
+     * @return bool
+     */
+    private function fpmIsRunning()
+    {
+        $cmd = "ps -ef|grep php-fpm|grep \"master process\"|grep -v grep";
+
+        Logger::cmd($cmd);
+
+        $res = $this->exe($cmd);
+
+        if ($res) {
+            Logger::success($res);
+            return true;
+        }
+
+        Logger::warning("no php-fpm process is running.");
+        return false;
+    }
+
+    private function getFpmPath()
+    {
+        $cmd = "ps -ef|grep php-fpm|grep \"master process\"|grep -v grep|awk '{print \"sudo ls -al /proc/\"$2}'|sh|grep exe|awk -F \"-> \" '{print $2}'";
+
+        Logger::cmd($cmd);
+
+        $res = $this->exe($cmd);
+
+        if ($res) {
+            Logger::success($res);
+            return $res;
+        }
+
+        Logger::warning("no php-fpm process is running.");
+        return "";
+    }
+
+    /**
+     *
+     * /data/local/php72/sbin/php-fpm
+     * /usr/local/php/sbin/php-fpm
+     * /usr/local/php5/sbin/php-fpm
+     *
+     * @param $fpmPath
+     */
+    private function delivererCheck($fpmPath)
+    {
+        $tmp = explode("\n", $fpmPath);
+        foreach ($tmp as $fpmBin) {
+            $cmd = trim($fpmBin) . " -m|grep deliverer";
+            Logger::cmd($cmd);
+            $res = $this->exe($cmd);
+            if ($res) {
+                Logger::success(trim($fpmBin) . " deliverer has been installed.");
+            } else {
+                Logger::warning(trim($fpmBin) . " deliverer not installed.");
+            }
+        }
+    }
+
+    private function exe($cmd)
+    {
+        $fp  = popen($cmd, "r");
+        $res = stream_get_contents($fp);
+        $res = trim($res);
+        fclose($fp);
+        return $res;
+    }
+}
+
 /**
  * Class PhpFunction
  *
@@ -306,11 +449,11 @@ class PhpFunction
         }
 
         $this->startTime = $data[0];
-        $this->point = $data[1];
+        $this->point     = $data[1];
         $this->prevPoint = $data[2];
-        $this->method = $data[3];
-        $this->file = $data[4];
-        $this->line = $data[5];
+        $this->method    = $data[3];
+        $this->file      = $data[4];
+        $this->line      = $data[5];
     }
 }
 
@@ -319,7 +462,7 @@ class TraceLogProcess
     /**
      * @var PhpFunction[]
      */
-    private $stack = array();
+    private $stack = [];
 
     private $stackMaxDepth;
 
@@ -354,7 +497,7 @@ class TraceLogProcess
 
     public function clearAllFunctionPoint()
     {
-        self::$allFunctionPoint = array();
+        self::$allFunctionPoint = [];
     }
 
     /**
@@ -365,7 +508,7 @@ class TraceLogProcess
      */
     public function __construct($stackMaxDepth = 5, $stackRootPoint = "(nil)")
     {
-        $this->stackMaxDepth = $stackMaxDepth;
+        $this->stackMaxDepth  = $stackMaxDepth;
         $this->stackRootPoint = $stackRootPoint;
     }
 
@@ -384,7 +527,7 @@ class TraceLogProcess
             return;
         }
 
-        $phpFunction = new PhpFunction($line);
+        $phpFunction         = new PhpFunction($line);
         $phpFunction->status = $isHit ? 1 : 0;
 
         $this->pushStack($phpFunction);
@@ -400,10 +543,10 @@ class TraceLogProcess
         }
 
         if (empty($this->stack)) {
-            $function->level = 1;
+            $function->level         = 1;
             $this->stackCurrentDepth = $function->level;
-            $function->useTime = 0;
-            $this->stack[] = $function;
+            $function->useTime       = 0;
+            $this->stack[]           = $function;
 
             return true;
         }
@@ -480,7 +623,7 @@ class TraceLogProcess
             unset($function);
         }
 
-        $this->stack = array();
+        $this->stack             = [];
         $this->stackCurrentDepth = 0;
     }
 

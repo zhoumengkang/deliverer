@@ -28,11 +28,11 @@
 #include "php_deliverer.h"
 #include "main/SAPI.h"
 
-#if PHP_VERSION_ID < 70000
-#elif PHP_VERSION_ID < 50400
+#if PHP_VERSION_ID < 50400
 #define OP1_FUNCTION_PTR(n) (&(n)->op1.u.constant)
-#else
+#elif PHP_VERSION_ID < 70000
 #define OP1_FUNCTION_PTR(n) ((n)->op1.zv)
+#else
 #endif
 
 static int le_deliverer;

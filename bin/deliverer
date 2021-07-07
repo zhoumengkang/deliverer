@@ -338,6 +338,7 @@ class EnvCheck
 
         $fpmPath = $this->getFpmPath();
 
+        $this->phpVersion($fpmPath);
         $this->delivererCheck($fpmPath);
     }
 
@@ -402,6 +403,17 @@ class EnvCheck
             } else {
                 Logger::warning(trim($fpmBin) . " deliverer not installed.");
             }
+        }
+    }
+
+    private function phpVersion($fpmPath)
+    {
+        $tmp = explode("\n", $fpmPath);
+        foreach ($tmp as $fpmBin) {
+            $cmd = trim($fpmBin) . " -v";
+            Logger::cmd($cmd);
+            $res = $this->exe($cmd);
+            Logger::success($res);
         }
     }
 

@@ -2,7 +2,7 @@
 <?php
 
 ini_set("display_errors", "On");
-error_reporting(E_ALL);
+error_reporting(E_ALL & ~E_DEPRECATED);
 
 $deliverer = new Deliverer($argv);
 $deliverer->monitor();
@@ -247,7 +247,7 @@ more info : https://mengkang.net/1473.html\n\n";
             if ($lineNo == 2) {
                 echo $line . "\n";
 
-                if ($this->traceRoute && !$matched && strpos($line, $this->trace)) {
+                if ($this->trace && $this->traceRoute && !$matched && strpos($line, $this->trace)) {
                     $matched = true;
                 }
 
@@ -256,7 +256,7 @@ more info : https://mengkang.net/1473.html\n\n";
 
             $match = false;
 
-            if (!$this->traceRoute) {
+            if ($this->trace && !$this->traceRoute) {
                 $match = strpos($line, $this->trace);
                 if (!$matched && $match) {
                     $matched = true;

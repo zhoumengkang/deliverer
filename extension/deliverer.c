@@ -39,6 +39,8 @@ static int le_deliverer;
 
 static int deliverer_stat = -1;
 
+static char *deliverer_watch = NULL;
+
 static FILE *fp;
 
 static char *get_function_name(zend_function *fbc) /* {{{ */
@@ -195,9 +197,34 @@ static void set_deliverer_stat() /* {{{ */
 }
 /* }}} */
 
+static void get_deliverer_watch() /* {{{ */
+{
+    const char *watch = "/tmp/deliverer/config/watch";
+
+    if (access(watch,R_OK) != 0) {
+        return;
+    }
+
+    struct stat statbuf;
+
+    stat(watch,&statbuf);
+    int size = statbuf.st_size;
+
+    deliverer_watch = (char *)emalloc(size+1);
+    memset(deliverer_watch, 0, size+1);
+
+    FILE *fp;
+    if ((fp = fopen(watch, "r")) == NULL){
+        return;
+    }
+
+    fgets(deliverer_watch, size, fp);
+}
+/* }}} */
+
 static char *build_deliverer_cli_argv() /* {{{ */
 {
-    char *cli_argv_string;
+    char *cli_argv_string = NULL;
 
     int len = 0;
     int i;
@@ -283,7 +310,10 @@ PHP_RINIT_FUNCTION(deliverer)
         fprintf(fp, "---\n%d-%ld %s %s\n", getpid(), tv.tv_sec * 1000000 + tv.tv_usec, sapi_module.name,
                 cli_argv_string);
 
-        efree(cli_argv_string);
+        if (cli_argv_string != NULL)
+        {
+            efree(cli_argv_string);
+        }
     }
     else
     {
@@ -306,6 +336,12 @@ PHP_RSHUTDOWN_FUNCTION(deliverer)
 
     fprintf(fp, "---end---");
     fclose(fp);
+
+    if (deliverer_watch != NULL)
+    {
+        efree(deliverer_watch);
+    }
+
     return SUCCESS;
 }
 /* }}} */

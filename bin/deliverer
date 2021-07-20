@@ -10,12 +10,12 @@ $deliverer->monitor();
 class Deliverer
 {
     const WORK_SPACE = "/tmp/deliverer";
+    const STAT_FILE  = "stat";
+    const WATCH_FILE = "watch";
 
     private $logDir;
     private $processedLogDir;
     private $configDir;
-
-    private $stat = "stat";
 
     /**
      * @var string
@@ -51,8 +51,8 @@ class Deliverer
         $this->processedLogDir = self::WORK_SPACE . "/history/";
         $this->configDir       = self::WORK_SPACE . "/config/";
 
-        $shortOpts = "t::l:n:v:r:ch";
-        $longOpts  = ["trace::", "level:", "number:", "view:", "route:", "check", "help"];
+        $shortOpts = "t::l:n:v:r:w:ch";
+        $longOpts  = ["trace::", "level:", "number:", "view:", "route:", "watch", "check", "help"];
         $options   = getopt($shortOpts, $longOpts);
 
         foreach ($options as $k => $v) {
@@ -87,6 +87,10 @@ class Deliverer
                 $this->traceRequestId = $v;
                 $this->stackDepth     = $this->stackDepth > 50 ? $this->stackDepth : 50;
             }
+
+            if ($k == "w" || $k == "watch") {
+                $this->setWatch($v);
+            }
         }
 
         if ($this->trace === null && $this->traceRequestId == null) {
@@ -107,7 +111,7 @@ class Deliverer
         $this->initDir($this->logDir);
         $this->initDir($this->processedLogDir);
 
-        $file = $this->configDir . $this->stat;
+        $file = $this->configDir . self::STAT_FILE;
 
         if (file_exists($file)) {
             Logger::warning("monitor pid:[" . file_get_contents($file) . "] is running.");
@@ -150,13 +154,28 @@ class Deliverer
         }
     }
 
+    private function setWatch($watch)
+    {
+        file_put_contents($this->configDir . self::WATCH_FILE, $watch);
+    }
+
+    private function delWatch()
+    {
+        $watch = $this->configDir . self::WATCH_FILE;
+        if ($watch) {
+            unlink($watch);
+        }
+    }
+
     public function stop()
     {
-        $stat = $this->configDir . $this->stat;
+        $stat = $this->configDir . self::STAT_FILE;
 
         if (file_exists($stat)) {
             unlink($stat);
         }
+
+        $this->delWatch();
 
         $this->cleanLog();
     }
@@ -166,6 +185,7 @@ class Deliverer
         echo "Usage: deliverer [OPTION]...
   -h,  --help                      print this help
   -c,  --check                     check php env
+  -w,  --watch                     watch function or method params
   -r,  --route                     trace filter by http url route
   -t,  --trace                     trace function or method, default value is all user function
   -l,  --level                     trace function stack depth, default value is 5    

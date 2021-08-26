@@ -168,7 +168,8 @@ class Deliverer
   -c,  --check                     check php env
   -r,  --route                     trace filter by http url route
   -t,  --trace                     trace function or method, default value is all user function
-  -l,  --level                     trace function stack depth, default value is 5    
+  -l,  --level                     trace function stack depth, default value is 5
+  -v,  --view                      view stack full info
   -n,  --number                    execution times and exit
   
 more info : https://mengkang.net/1473.html\n\n";

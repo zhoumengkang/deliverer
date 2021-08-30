@@ -551,7 +551,7 @@ class TraceLogProcess
         $this->currentFunction = $function;
         $this->addFunctionPoint($function->point);
 
-        if ($function->prevPoint == $this->stackRootPoint || !in_array($function->prevPoint, self::$allFunctionPoint)) {
+        if ($function->prevPoint == $this->stackRootPoint) {
             $this->popStack();
         }
 
@@ -575,7 +575,7 @@ class TraceLogProcess
             }
 
             // 挂载到前置调用链
-            if ($function->prevPoint == $item->point) {
+            if ($function->prevPoint == $item->point || !in_array($function->prevPoint, self::$allFunctionPoint)) {
                 $function->level = $item->level + 1;
 
                 // 如果超出则忽略

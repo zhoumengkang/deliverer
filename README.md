@@ -1,5 +1,11 @@
 PHP 祖传代码跑路拯救者，支持 PHP5 & PHP7
 
+# 干嘛用
+
+如果你对线上一个项目运行逻辑不熟悉，或者你对某个方法的调用来源不清楚，又或者线上有一个接口不知道是哪里异常退出了，还有线上调用特别耗时，都比较适合使用 Deliverer 来解决，帮助你避免跑路。
+
+原理是通过在`PHP_MINIT`阶段，通过`zend_set_user_opcode_handler` 来设置对 `ZEND_DO_UCALL` 、`ZEND_DO_FCALL_BY_NAME`、`ZEND_DO_FCALL` 三类 `opcode` 的处理分析。
+
 以下 PHP 版本号是我和其他使用者线上实际使用都 OK 的版本号，理论上 PHP5 和 PHP7 都支持
 
 - [x] 5.3.29
